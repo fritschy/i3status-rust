@@ -19,6 +19,7 @@ pub struct Temperature {
     collapsed: bool,
     id: String,
     update_interval: Duration,
+    chip: String,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
@@ -31,11 +32,19 @@ pub struct TemperatureConfig {
     /// Collapsed by default?
     #[serde(default = "TemperatureConfig::default_collapsed")]
     pub collapsed: bool,
+
+    /// Chip selection
+    #[serde(default = "TemperatureConfig::default_chip")]
+    pub chip: String,
 }
 
 impl TemperatureConfig {
     fn default_interval() -> Duration {
         Duration::from_secs(5)
+    }
+
+    fn default_chip() -> String {
+        "*-*".to_owned()
     }
 
     fn default_collapsed() -> bool {
@@ -54,6 +63,7 @@ impl ConfigBlock for Temperature {
             output: String::new(),
             collapsed: block_config.collapsed,
             id,
+            chip: block_config.chip,
         })
     }
 }
@@ -61,7 +71,7 @@ impl ConfigBlock for Temperature {
 impl Block for Temperature {
     fn update(&mut self) -> Result<Option<Duration>> {
         let output = Command::new("sensors")
-            .args(&["-u"])
+            .args(&["-u", self.chip.as_str()])
             .output()
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
             .unwrap_or_else(|e| e.description().to_owned());
